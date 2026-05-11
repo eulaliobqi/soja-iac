@@ -1,19 +1,19 @@
 # ============================================================
-# Parâmetros da análise – edite AQUI antes de rodar
+# Parâmetros da análise – Glycine max | IAC100 vs BR16
 # ============================================================
 
 # --- Inputs principais ---
-samplesheet: "samplesheet.csv"
-genome_fasta: "/path/to/Gmax_508_v4.0.fa"
-genome_gff3:  "/path/to/Gmax_508_Wm82.a4.v1.gene_exons.gff3"
-genome_gtf:   null   # deixe null para converter automaticamente do GFF3
-genome_index: null   # deixe null para construir o índice automaticamente
+samplesheet:  "samplesheet.csv"
+genome_fasta: "/home/eulalio/soja/soja-iac/genome/gmax-genome.fa"
+genome_gff3:  "/home/eulalio/soja/soja-iac/genome/gmax-annot.gff3"
+genome_gtf:   null   # null = converter automaticamente do GFF3
+genome_index: null   # null = construir índice automaticamente
 
 # --- Diretório de resultados ---
 outdir: "results"
 
 # --- Contraste DESeq2 ---
-contrast:        "treatment_vs_control"
+contrast:        "IAC100_vs_BR16"
 control_group:   "control"
 treatment_group: "treatment"
 
@@ -27,6 +27,12 @@ strandedness: -1
 feature_type: "exon"
 gene_attr:    "gene_id"
 
+# --- Trimagem ---
+# true = reads já trimados (pula fastp), false = trimar com fastp
+skip_trim: true
+min_length: 36
+quality:    20
+
 # --- rMATS ---
 read_length: 150         # comprimento das reads após trimagem
 rmats_type:  "paired"    # paired (paired-end) ou single (single-end)
@@ -35,13 +41,9 @@ rmats_type:  "paired"    # paired (paired-end) ou single (single-end)
 hisat2_threads:    8
 hisat2_max_intron: 500000
 
-# --- fastp ---
-min_length: 36
-quality:    20
-
 # --- Organismo KEGG ---
 kegg_organism: "gma"     # Glycine max
 
 # --- Relatório ---
-report_title:  "RNASeq Insight – Glycine max"
+report_title:  "RNASeq Insight – Glycine max (IAC100 vs BR16)"
 report_author: "Eulalio Santos"

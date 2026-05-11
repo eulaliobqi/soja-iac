@@ -1,7 +1,7 @@
 sample,fastq_1,fastq_2,condition,replicate
-ctrl_rep1,data/ctrl_rep1_R1.fastq.gz,data/ctrl_rep1_R2.fastq.gz,control,1
-ctrl_rep2,data/ctrl_rep2_R1.fastq.gz,data/ctrl_rep2_R2.fastq.gz,control,2
-ctrl_rep3,data/ctrl_rep3_R1.fastq.gz,data/ctrl_rep3_R2.fastq.gz,control,3
-treat_rep1,data/treat_rep1_R1.fastq.gz,data/treat_rep1_R2.fastq.gz,treatment,1
-treat_rep2,data/treat_rep2_R1.fastq.gz,data/treat_rep2_R2.fastq.gz,treatment,2
-treat_rep3,data/treat_rep3_R1.fastq.gz,data/treat_rep3_R2.fastq.gz,treatment,3
+BR16_rep1,/home/eulalio/soja/soja-iac/data-raw/BR16-1_1.trimmed.fq.gz,/home/eulalio/soja/soja-iac/data-raw/BR16-1_2.trimmed.fq.gz,control,1
+BR16_rep2,/home/eulalio/soja/soja-iac/data-raw/BR16-2_1.trimmed.fq.gz,/home/eulalio/soja/soja-iac/data-raw/BR16-2_2.trimmed.fq.gz,control,2
+BR16_rep3,/home/eulalio/soja/soja-iac/data-raw/BR16-3_1.trimmed.fq.gz,/home/eulalio/soja/soja-iac/data-raw/BR16-3_2.trimmed.fq.gz,control,3
+IAC100_rep1,/home/eulalio/soja/soja-iac/data-raw/IAC100-1_1.trimmed.fq.gz,/home/eulalio/soja/soja-iac/data-raw/IAC100-1_2.trimmed.fq.gz,treatment,1
+IAC100_rep3,/home/eulalio/soja/soja-iac/data-raw/IAC100-3_1.trimmed.fq.gz,/home/eulalio/soja/soja-iac/data-raw/IAC100-3_2.trimmed.fq.gz,treatment,3
+IAC100_rep4,/home/eulalio/soja/soja-iac/data-raw/IAC100-4_1.trimmed.fq.gz,/home/eulalio/soja/soja-iac/data-raw/IAC100-4_2.trimmed.fq.gz,treatment,4
