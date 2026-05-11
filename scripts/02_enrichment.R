@@ -7,7 +7,7 @@ suppressPackageStartupMessages({
   library(optparse)
   library(clusterProfiler)
   library(enrichplot)
-  library(org.Gmax.eg.db)
+  library(AnnotationHub)
   library(AnnotationDbi)
   library(fgsea)
   library(dplyr)
@@ -15,6 +15,19 @@ suppressPackageStartupMessages({
   library(ggplot2)
   library(stringr)
 })
+
+# org.Gmax.eg.db foi removido do Bioconductor 3.20+; carrega via AnnotationHub
+load_gmax_db <- function() {
+  cat("Carregando OrgDb Glycine max via AnnotationHub...\n")
+  ah <- AnnotationHub(ask = FALSE)
+  hits <- query(ah, c("OrgDb", "Glycine"))
+  if (length(hits) == 0) hits <- query(ah, c("OrgDb", "soybean"))
+  if (length(hits) == 0) stop("OrgDb para Glycine max não encontrado no AnnotationHub.")
+  db <- hits[[length(hits)]]
+  cat(sprintf("  OrgDb: %s\n", hits$title[length(hits)]))
+  return(db)
+}
+gmax_db <- load_gmax_db()
 
 # ── Argumentos ───────────────────────────────────────────────
 opt_list <- list(
@@ -48,7 +61,7 @@ cat(sprintf("Genes DE: %d | Todos testados: %d\n", nrow(de_sig), nrow(res_all)))
 # org.Gmax.eg.db usa SYMBOL e ENTREZID
 # Os IDs do featureCounts (Glyma.XXX) são mapeados via SYMBOL ou TAIR
 
-map_to_entrez <- function(gene_ids, db = org.Gmax.eg.db) {
+map_to_entrez <- function(gene_ids, db = gmax_db) {
   # Tenta múltiplas keytypes na ordem de prioridade
   for (ktype in c("SYMBOL", "TAIR", "ALIAS", "GENENAME")) {
     available <- try(keytypes(db), silent = TRUE)
@@ -92,7 +105,7 @@ run_go_ora <- function(genes, bg, ont, label) {
     res <- enrichGO(
       gene          = genes,
       universe      = bg,
-      OrgDb         = org.Gmax.eg.db,
+      OrgDb         = gmax_db,
       ont           = ont,
       pAdjustMethod = "BH",
       pvalueCutoff  = 0.05,
@@ -164,7 +177,7 @@ ranked_vec <- ranked_vec[!duplicated(names(ranked_vec))]
 gsea_go <- tryCatch({
   res <- gseGO(
     geneList     = ranked_vec,
-    OrgDb        = org.Gmax.eg.db,
+    OrgDb        = gmax_db,
     ont          = "BP",
     minGSSize    = 15,
     maxGSSize    = 500,

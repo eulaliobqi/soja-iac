@@ -11,10 +11,9 @@ cat("Instalando pacotes Bioconductor via BiocManager...\n")
 if (!requireNamespace("BiocManager", quietly = TRUE))
   install.packages("BiocManager", repos = "https://cloud.r-project.org")
 
-# Instala WGCNA e suas dependências Bioconductor
+# org.Gmax.eg.db removido do Bioconductor 3.20+; será carregado via AnnotationHub em runtime
 bioc_pkgs <- c(
   "WGCNA",
-  "org.Gmax.eg.db",
   "GO.db",
   "impute",
   "preprocessCore"
