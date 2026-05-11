@@ -12,7 +12,9 @@ dependencies:
   - bioconductor-fgsea>=1.24
   - bioconductor-biomart>=2.54
   - bioconductor-annotationhub>=3.8
-  - bioconductor-biocmanager
+  - bioconductor-impute
+  - bioconductor-preprocesscore
+  - r-biocmanager
   - r-ggplot2>=3.4
   - r-pheatmap>=1.0.12
   - r-ggrepel>=0.9
@@ -32,6 +34,4 @@ dependencies:
   - r-patchwork>=1.1
   - r-dynamictreecut>=1.63
   - r-flashclust>=1.01
-  - r-impute
-  - r-preprocesscore
   - quarto
