@@ -26,24 +26,20 @@ process HISAT2_BUILD {
     path(gtf)
 
     output:
-    path("genome_index*.ht2"), emit: index
-    path("genome_index"),      emit: index_dir
+    path("genome_index"), emit: index_dir
 
     script:
     """
-    # Extrai splice sites e exons do GTF para melhorar o alinhamento
-    hisat2_extract_splice_sites.py ${gtf} > genome_splice_sites.txt
-    hisat2_extract_exons.py ${gtf}         > genome_exons.txt
-
-    hisat2-build \\
-        -p ${task.cpus} \\
-        --ss genome_splice_sites.txt \\
-        --exon genome_exons.txt \\
-        ${genome_fasta} \\
-        genome_index
+    hisat2_extract_splice_sites.py ${gtf} > splice_sites.txt
+    hisat2_extract_exons.py ${gtf}         > exons.txt
 
     mkdir -p genome_index
-    mv genome_index.*.ht2 genome_index/ 2>/dev/null || true
+    hisat2-build \\
+        -p ${task.cpus} \\
+        --ss splice_sites.txt \\
+        --exon exons.txt \\
+        ${genome_fasta} \\
+        genome_index/genome_index
     """
 }
 

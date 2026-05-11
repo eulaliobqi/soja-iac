@@ -7,7 +7,7 @@ samplesheet:  "samplesheet.csv"
 genome_fasta: "/home/eulalio/soja/soja-iac/genome/genome.fa"
 genome_gff3:  "/home/eulalio/soja/soja-iac/genome/annot-genome.gff3"
 genome_gtf:   null   # null = converter automaticamente do GFF3
-genome_index: null   # null = construir índice automaticamente
+genome_index: "/home/eulalio/soja/soja-iac/genome/genome_index"  # índice HISAT2 pré-construído
 
 # --- Diretório de resultados ---
 outdir: "results"
