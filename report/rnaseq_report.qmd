@@ -1,0 +1,393 @@
+---
+title: "`r params$report_title`"
+author: "`r params$report_author`"
+date: "`r format(Sys.Date(), '%d de %B de %Y')`"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-title: "Índice"
+    number-sections: true
+    theme: cosmo
+    code-fold: true
+    embed-resources: true
+    fig-width: 10
+    fig-height: 7
+params:
+  report_title:   "RNASeq Insight – Glycine max"
+  report_author:  "Eulalio Santos"
+  deseq2_dir:     "results/deseq2"
+  enrichment_dir: "results/enrichment"
+  splicing_dir:   "results/splicing"
+  wgcna_dir:      "results/wgcna"
+  integration_dir: "results/integration"
+  padj_cutoff:    0.05
+  lfc_cutoff:     1.0
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE,
+                      fig.align = "center")
+
+suppressPackageStartupMessages({
+  library(dplyr)
+  library(readr)
+  library(ggplot2)
+  library(pheatmap)
+  library(knitr)
+  library(kableExtra)
+  library(scales)
+})
+
+# Helper para carregar arquivos com fallback silencioso
+load_result <- function(path) {
+  if (file.exists(path)) {
+    tryCatch(read_tsv(path, show_col_types = FALSE),
+             error = function(e) { message("Erro ao carregar: ", path); NULL })
+  } else {
+    message("Arquivo não encontrado: ", path)
+    NULL
+  }
+}
+
+# Carrega todos os resultados
+de_all    <- load_result(file.path(params$deseq2_dir,     "deseq2_results_all.tsv"))
+de_sig    <- load_result(file.path(params$deseq2_dir,     "deseq2_results_sig.tsv"))
+norm_cnt  <- load_result(file.path(params$deseq2_dir,     "normalized_counts.tsv"))
+go_bp     <- load_result(file.path(params$enrichment_dir, "go_bp_results.tsv"))
+kegg_res  <- load_result(file.path(params$enrichment_dir, "kegg_results.tsv"))
+gsea_go   <- load_result(file.path(params$enrichment_dir, "gsea_go_results.tsv"))
+splicing  <- load_result(file.path(params$splicing_dir,   "splicing_significant.tsv"))
+wgcna_mod <- load_result(file.path(params$wgcna_dir,      "wgcna_modules.tsv"))
+hub_genes <- load_result(file.path(params$wgcna_dir,      "wgcna_hub_genes.tsv"))
+candidates <- load_result(file.path(params$integration_dir, "key_candidates.tsv"))
+
+theme_pub <- theme_bw(base_size = 12) +
+  theme(panel.grid.minor = element_blank(),
+        plot.title = element_text(face = "bold"))
+```
+
+# Introdução
+
+Este relatório apresenta os resultados da análise completa de RNA-Seq aplicada a *Glycine max* (soja), incluindo:
+
+- Controle de qualidade das leituras
+- Alinhamento ao genoma de referência (Wm82.a4.v1)
+- Quantificação e expressão diferencial (DESeq2)
+- Análise de splicing alternativo (rMATS)
+- Enriquecimento funcional (GO + KEGG + GSEA)
+- Co-expressão gênica (WGCNA)
+- Integração multi-ômica e ranking de genes candidatos
+
+**Contraste:** `r params$report_title` — tratamento *vs.* controle
+
+---
+
+# Resumo Executivo
+
+```{r executive_summary}
+n_de     <- if (!is.null(de_sig)) nrow(de_sig) else "N/A"
+n_up     <- if (!is.null(de_sig)) sum(de_sig$regulation == "up",   na.rm = TRUE) else "N/A"
+n_down   <- if (!is.null(de_sig)) sum(de_sig$regulation == "down", na.rm = TRUE) else "N/A"
+n_splice <- if (!is.null(splicing)) nrow(splicing) else "N/A"
+n_cand   <- if (!is.null(candidates)) nrow(candidates) else "N/A"
+n_kegg   <- if (!is.null(kegg_res)) sum(kegg_res$p.adjust < 0.05, na.rm = TRUE) else "N/A"
+
+summary_df <- data.frame(
+  Métrica  = c("Genes DE totais", "Up-regulated", "Down-regulated",
+               "Eventos splicing", "KEGG pathways", "Genes candidatos"),
+  Resultado = c(n_de, n_up, n_down, n_splice, n_kegg, n_cand)
+)
+
+kable(summary_df, col.names = c("Métrica", "Resultado"), align = c("l","r")) %>%
+  kable_styling(bootstrap_options = c("striped","hover"), full_width = FALSE)
+```
+
+---
+
+# Controle de Qualidade
+
+O controle de qualidade foi realizado com **FastQC** (pré e pós-trimagem) e consolidado com **MultiQC**. A trimagem foi executada com **fastp**, removendo adaptadores e bases de baixa qualidade (Q < `r params$lfc_cutoff`).
+
+Os relatórios detalhados estão disponíveis em `results/qc/multiqc/`.
+
+---
+
+# Expressão Diferencial
+
+## PCA das Amostras
+
+```{r pca_plot, fig.cap="Análise de Componentes Principais (PCA) das amostras (VST-normalizado)."}
+if (!is.null(norm_cnt)) {
+  mat <- norm_cnt %>%
+    tibble::column_to_rownames("gene_id") %>%
+    as.matrix()
+
+  pca     <- prcomp(t(mat), scale. = TRUE)
+  pct     <- round(summary(pca)$importance[2, 1:2] * 100, 1)
+  df_pca  <- data.frame(
+    PC1 = pca$x[, 1], PC2 = pca$x[, 2],
+    sample = rownames(pca$x)
+  ) %>%
+    mutate(condition = ifelse(grepl("ctrl|control", sample, ignore.case = TRUE),
+                               "control", "treatment"))
+
+  ggplot(df_pca, aes(PC1, PC2, color = condition, label = sample)) +
+    ggrepel::geom_text_repel(size = 3.5) +
+    geom_point(size = 4) +
+    scale_color_manual(values = c(control = "#2166AC", treatment = "#D6604D")) +
+    labs(x = paste0("PC1 (", pct[1], "%)"),
+         y = paste0("PC2 (", pct[2], "%)"),
+         title = "PCA – Amostras", color = "Condição") +
+    theme_pub
+} else {
+  cat("Dados de contagens normalizadas não encontrados.")
+}
+```
+
+## Volcano Plot
+
+```{r volcano_plot, fig.height=8, fig.cap="Volcano plot: genes diferencialmente expressos."}
+if (!is.null(de_all)) {
+  df_vol <- de_all %>%
+    filter(!is.na(padj), !is.na(log2FoldChange)) %>%
+    mutate(
+      color     = case_when(
+        padj < params$padj_cutoff & log2FoldChange >  params$lfc_cutoff ~ "Up",
+        padj < params$padj_cutoff & log2FoldChange < -params$lfc_cutoff ~ "Down",
+        TRUE ~ "NS"
+      ),
+      log_padj  = pmin(-log10(padj + 1e-300), 300),
+      label_gene = ifelse(padj < 1e-10 | abs(log2FoldChange) > 3, gene_id, "")
+    )
+
+  ggplot(df_vol, aes(log2FoldChange, log_padj, color = color, label = label_gene)) +
+    geom_point(alpha = 0.6, size = 1.2) +
+    ggrepel::geom_text_repel(size = 2.8, max.overlaps = 20, color = "black") +
+    scale_color_manual(values = c(Up = "#D6604D", Down = "#2166AC", NS = "#CCCCCC")) +
+    geom_hline(yintercept = -log10(params$padj_cutoff), linetype = "dashed", color = "grey40") +
+    geom_vline(xintercept = c(-params$lfc_cutoff, params$lfc_cutoff), linetype = "dashed", color = "grey40") +
+    labs(title  = "Volcano Plot – Expressão Diferencial",
+         x      = "log2 Fold Change",
+         y      = "-log10(FDR)",
+         color  = "Regulação") +
+    theme_pub
+} else {
+  cat("Resultados DESeq2 não encontrados.")
+}
+```
+
+## Top Genes Diferencialmente Expressos
+
+```{r top_de_table}
+if (!is.null(de_sig) && nrow(de_sig) > 0) {
+  de_sig %>%
+    arrange(padj) %>%
+    head(20) %>%
+    select(gene_id, log2FoldChange, baseMean, padj, regulation) %>%
+    mutate(
+      log2FoldChange = round(log2FoldChange, 3),
+      baseMean       = round(baseMean, 1),
+      padj           = formatC(padj, format = "e", digits = 2)
+    ) %>%
+    kable(col.names = c("Gene ID", "log2FC", "baseMean", "FDR", "Regulação"),
+          caption = "Top 20 genes com menor FDR") %>%
+    kable_styling(bootstrap_options = c("striped","hover","condensed"))
+} else {
+  cat("Nenhum gene DE significativo encontrado.")
+}
+```
+
+## Heatmap – Top 50 Genes DE
+
+```{r heatmap, fig.height=10, fig.cap="Heatmap dos 50 genes com menor FDR (z-score por gene)."}
+if (!is.null(de_sig) && !is.null(norm_cnt) && nrow(de_sig) > 0) {
+  top50 <- head(de_sig$gene_id, 50)
+  mat <- norm_cnt %>%
+    tibble::column_to_rownames("gene_id") %>%
+    as.matrix()
+
+  top50_avail <- intersect(top50, rownames(mat))
+  if (length(top50_avail) > 1) {
+    mat_h <- mat[top50_avail, ]
+    mat_h <- t(scale(t(mat_h)))
+
+    pheatmap(mat_h,
+      show_rownames     = TRUE,
+      fontsize_row      = 7,
+      fontsize_col      = 9,
+      clustering_method = "ward.D2",
+      color  = colorRampPalette(c("#2166AC", "white", "#D6604D"))(100),
+      border_color      = NA,
+      main   = "Top 50 genes DE – z-score",
+      silent = TRUE)$gtable %>% grid::grid.draw()
+  }
+} else {
+  cat("Dados insuficientes para heatmap.")
+}
+```
+
+---
+
+# Enriquecimento Funcional
+
+## GO – Processos Biológicos
+
+```{r go_bp_plot, fig.cap="Dotplot dos 20 termos GO-BP mais enriquecidos."}
+if (!is.null(go_bp) && nrow(go_bp) > 0) {
+  df_go <- go_bp %>%
+    filter(p.adjust < 0.05) %>%
+    arrange(p.adjust) %>%
+    head(20) %>%
+    mutate(
+      GeneRatio_num = sapply(GeneRatio, function(x) eval(parse(text = x))),
+      Description   = stringr::str_trunc(Description, 50)
+    )
+
+  ggplot(df_go, aes(GeneRatio_num, reorder(Description, GeneRatio_num),
+                     size = Count, color = -log10(p.adjust))) +
+    geom_point() +
+    scale_color_gradient(low = "#74ADD1", high = "#D73027", name = "-log10(FDR)") +
+    scale_size_continuous(range = c(3, 10), name = "Gene Count") +
+    labs(title = "GO – Biological Process",
+         x = "Gene Ratio", y = "") +
+    theme_pub +
+    theme(axis.text.y = element_text(size = 9))
+} else {
+  cat("Nenhum termo GO-BP enriquecido encontrado.")
+}
+```
+
+## KEGG Pathways
+
+```{r kegg_plot, fig.cap="KEGG pathways enriquecidos no contraste."}
+if (!is.null(kegg_res) && nrow(kegg_res) > 0) {
+  df_kegg <- kegg_res %>%
+    filter(p.adjust < 0.05) %>%
+    arrange(p.adjust) %>%
+    head(20) %>%
+    mutate(
+      GeneRatio_num = sapply(GeneRatio, function(x) eval(parse(text = x))),
+      Description   = stringr::str_trunc(Description, 45)
+    )
+
+  ggplot(df_kegg, aes(GeneRatio_num, reorder(Description, GeneRatio_num),
+                       size = Count, color = -log10(p.adjust))) +
+    geom_point() +
+    scale_color_gradient(low = "#FEC44F", high = "#D73027", name = "-log10(FDR)") +
+    scale_size_continuous(range = c(3, 10), name = "Gene Count") +
+    labs(title = "KEGG Pathways", x = "Gene Ratio", y = "") +
+    theme_pub +
+    theme(axis.text.y = element_text(size = 9))
+} else {
+  cat("Nenhum KEGG pathway enriquecido encontrado.")
+}
+```
+
+---
+
+# Splicing Alternativo
+
+```{r splicing_summary}
+if (!is.null(splicing) && nrow(splicing) > 0) {
+  splicing %>%
+    group_by(event_type) %>%
+    summarise(
+      Total = n(),
+      FDR_median = median(FDR, na.rm = TRUE),
+      PSI_mean = mean(abs(IncLevelDifference), na.rm = TRUE)
+    ) %>%
+    kable(col.names = c("Tipo de evento", "N sig.", "FDR mediana", "|ΔPSI| médio"),
+          digits = 4, caption = "Eventos de splicing alternativo significativos") %>%
+    kable_styling(bootstrap_options = c("striped","hover"))
+} else {
+  cat("Nenhum evento de splicing significativo encontrado.")
+}
+```
+
+---
+
+# Co-expressão Gênica (WGCNA)
+
+```{r wgcna_summary}
+if (!is.null(wgcna_mod) && nrow(wgcna_mod) > 0) {
+  wgcna_mod %>%
+    group_by(module) %>%
+    summarise(n_genes = n()) %>%
+    filter(module != "grey") %>%
+    arrange(desc(n_genes)) %>%
+    head(15) %>%
+    kable(col.names = c("Módulo", "N de genes"),
+          caption = "Módulos WGCNA (top 15)") %>%
+    kable_styling(bootstrap_options = c("striped","hover"), full_width = FALSE)
+} else {
+  cat("Resultados WGCNA não encontrados.")
+}
+```
+
+```{r hub_genes_table}
+if (!is.null(hub_genes) && nrow(hub_genes) > 0) {
+  hub_genes %>%
+    head(20) %>%
+    mutate(membership = round(membership, 4)) %>%
+    kable(col.names = c("Gene ID", "Módulo", "Membership"),
+          caption = "Top hub genes por módulo WGCNA") %>%
+    kable_styling(bootstrap_options = c("striped","hover"))
+}
+```
+
+---
+
+# Integração Multi-ômica e Genes Candidatos
+
+```{r candidates_table}
+if (!is.null(candidates) && nrow(candidates) > 0) {
+  candidates %>%
+    head(20) %>%
+    select(any_of(c("gene_id", "log2FoldChange", "padj", "regulation",
+                    "has_splicing", "in_pathway", "is_hub", "integration_score"))) %>%
+    mutate(
+      log2FoldChange = round(log2FoldChange, 3),
+      padj = formatC(padj, format = "e", digits = 2)
+    ) %>%
+    kable(caption = "Top 20 genes candidatos – maior score de integração") %>%
+    kable_styling(bootstrap_options = c("striped","hover","condensed"))
+} else {
+  cat("Nenhum gene candidato identificado com 2+ camadas de evidência.")
+}
+```
+
+---
+
+# Conclusões e Hipóteses
+
+Com base nos resultados integrados desta análise:
+
+1. **Expressão diferencial**: Foram identificados **`r n_de`** genes significativamente DE (FDR < `r params$padj_cutoff`, |LFC| > `r params$lfc_cutoff`), sendo **`r n_up`** up-regulados e **`r n_down`** down-regulados no grupo tratamento.
+
+2. **Enriquecimento**: As principais vias metabólicas alteradas estão descritas nos resultados GO-BP e KEGG. Em *Glycine max*, as vias de metabolismo de carbono, hormônios vegetais e resposta a estresse são frequentemente relevantes.
+
+3. **Splicing alternativo**: **`r n_splice`** eventos significativos foram detectados, indicando regulação pós-transcricional adicional além da expressão.
+
+4. **Genes candidatos**: **`r n_cand`** genes apresentam evidência em múltiplas camadas (DE + splicing e/ou pathway), sendo os candidatos mais robustos para validação experimental.
+
+---
+
+# Reprodutibilidade
+
+| Componente | Versão |
+|---|---|
+| Nextflow   | ≥ 24.04 |
+| HISAT2     | 2.2.1 |
+| featureCounts | 2.0.6 |
+| DESeq2     | 1.42 |
+| clusterProfiler | 4.10 |
+| rMATS      | 4.3.0 |
+| WGCNA      | 1.73 |
+| R          | 4.3.3 |
+
+Todos os ambientes são gerenciados por **Mamba** (conda). Os parâmetros completos estão em `params.yaml`.
+
+---
+
+*Relatório gerado automaticamente pelo RNASeq Insight Platform.*
