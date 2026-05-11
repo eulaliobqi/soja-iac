@@ -26,15 +26,22 @@ if [[ ! "$PROFILE" =~ ^(local|slurm|test)$ ]]; then
     exit 1
 fi
 
-# Verifica nextflow
-if ! command -v nextflow &>/dev/null; then
-    echo "ERRO: nextflow não encontrado no PATH."
+# Localiza nextflow: prefere o do env rnaseq-tools (Java correto) → PATH → erro
+if mamba run -n rnaseq-tools which nextflow &>/dev/null 2>&1; then
+    NF_CMD="mamba run -n rnaseq-tools nextflow"
+elif command -v nextflow &>/dev/null; then
+    NF_CMD="nextflow"
+else
+    echo "ERRO: nextflow não encontrado."
     echo "Execute: bash setup.sh primeiro."
     exit 1
 fi
 
+echo "  Nextflow : $($NF_CMD -version 2>&1 | head -1)"
+echo ""
+
 # Executa pipeline
-nextflow run "$SCRIPT_DIR/main.nf" \
+$NF_CMD run "$SCRIPT_DIR/main.nf" \
     -profile "$PROFILE" \
     -params-file "$SCRIPT_DIR/params.yaml" \
     -with-report "$SCRIPT_DIR/results/nextflow_report.html" \

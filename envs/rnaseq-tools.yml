@@ -14,6 +14,4 @@ dependencies:
   - subread=2.0.6
   - gffread=0.12.7
   - rseqc=5.0.3
-  - pip
-  - pip:
-      - rmats-turbo==4.3.0
+  - rmats>=4.1.0

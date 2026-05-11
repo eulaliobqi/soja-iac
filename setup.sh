@@ -26,22 +26,17 @@ fi
 
 echo "Usando: $CONDA_CMD"
 
-# ── Instala Nextflow ──────────────────────────────────────────
-if ! command -v nextflow &>/dev/null; then
-    echo ""
-    echo "Instalando Nextflow..."
-    $CONDA_CMD install -y -c bioconda -c conda-forge nextflow
-fi
-echo "Nextflow: $(nextflow -version 2>&1 | head -1)"
-
 # ── Instala ambientes ─────────────────────────────────────────
+# Nextflow é incluído no env rnaseq-tools (não instalar no base para evitar conflitos Java)
+
 install_env() {
     local yml="$1"
     local env_name
     env_name=$(grep "^name:" "$yml" | awk '{print $2}')
 
     if $CONDA_CMD env list | grep -q "^${env_name} "; then
-        echo "  Ambiente '$env_name' já existe – pulando."
+        echo "  Ambiente '$env_name' já existe – atualizando..."
+        $CONDA_CMD env update -n "$env_name" -f "$yml" --prune
     else
         echo "  Instalando '$env_name'..."
         $CONDA_CMD env create -f "$yml"
@@ -83,7 +78,13 @@ validate_tool rnaseq-tools hisat2
 validate_tool rnaseq-tools samtools
 validate_tool rnaseq-tools featureCounts
 validate_tool rnaseq-tools multiqc
+validate_tool rnaseq-tools nextflow
+validate_tool rnaseq-tools rmats.py
 validate_tool r-analysis   Rscript
+
+# Versão do Nextflow (usa o env rnaseq-tools para evitar conflito Java no base)
+NF_VER=$($CONDA_CMD run -n rnaseq-tools nextflow -version 2>&1 | head -1 || echo "N/A")
+echo "  Nextflow: $NF_VER"
 
 echo ""
 echo "═══════════════════════════════════════════"
