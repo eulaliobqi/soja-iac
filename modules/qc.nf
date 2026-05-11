@@ -4,7 +4,7 @@
 
 process FASTQC {
     tag "${meta.sample}"
-    publishDir "${params.outdir}/qc/${stage}", mode: 'copy'
+    publishDir { "${params.outdir}/qc/${stage}" }, mode: 'copy'
 
     input:
     tuple val(meta), path(reads)
