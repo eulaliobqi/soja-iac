@@ -101,30 +101,27 @@ workflow {
         index_dir = HISAT2_BUILD.out.index_dir
     }
 
-    // ── 3. QC inicial ────────────────────────────────────────
+    // ── 3. QC pré-trimagem ────────────────────────────────────
     FASTQC_RAW(reads_ch, 'pre_trim')
     raw_qc_reports = FASTQC_RAW.out.zip.map { meta, zip -> zip }.collect()
     MULTIQC_RAW(raw_qc_reports, 'pre_trim')
 
-    // ── 4. Trimagem (pulada se skip_trim = true) ──────────────
-    if (params.skip_trim) {
-        trimmed_ch = reads_ch
-    } else {
-        FASTP(reads_ch)
-        trimmed_ch = FASTP.out.reads
+    // ── 4. Trimagem ───────────────────────────────────────────
+    FASTP(reads_ch)
+    trimmed_ch = FASTP.out.reads
 
-        FASTQC_TRIMMED(trimmed_ch, 'post_trim')
-        trim_qc_reports = FASTQC_TRIMMED.out.zip.map { meta, zip -> zip }.collect()
-            .mix(FASTP.out.json.collect())
-        MULTIQC_TRIM(trim_qc_reports, 'post_trim')
-    }
+    // ── 5. QC pós-trimagem ────────────────────────────────────
+    FASTQC_TRIMMED(trimmed_ch, 'post_trim')
+    trim_qc_reports = FASTQC_TRIMMED.out.zip.map { meta, zip -> zip }.collect()
+        .mix(FASTP.out.json.collect())
+    MULTIQC_TRIM(trim_qc_reports, 'post_trim')
 
-    // ── 5. Alinhamento ────────────────────────────────────────
+    // ── 6. Alinhamento ────────────────────────────────────────
     HISAT2_ALIGN(trimmed_ch, index_dir)
     SAMTOOLS_SORT_INDEX(HISAT2_ALIGN.out.bam)
     sorted_bams_ch = SAMTOOLS_SORT_INDEX.out.bam
 
-    // ── 6. Quantificação ──────────────────────────────────────
+    // ── 7. Quantificação ──────────────────────────────────────
     all_bams = sorted_bams_ch.map { meta, bam -> bam }.collect()
     FEATURECOUNTS(all_bams, gtf, params.strandedness)
     PARSE_COUNTS(FEATURECOUNTS.out.counts, file(params.samplesheet))

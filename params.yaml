@@ -27,9 +27,7 @@ strandedness: -1
 feature_type: "exon"
 gene_attr:    "gene_id"
 
-# --- Trimagem ---
-# true = reads já trimados (pula fastp), false = trimar com fastp
-skip_trim: true
+# --- fastp (trimagem) ---
 min_length: 36
 quality:    20
 
