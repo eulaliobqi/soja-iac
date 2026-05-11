@@ -36,7 +36,7 @@ read_length: 150         # comprimento das reads após trimagem
 rmats_type:  "paired"    # paired (paired-end) ou single (single-end)
 
 # --- HISAT2 ---
-hisat2_threads:    8
+hisat2_threads:    16
 hisat2_max_intron: 500000
 
 # --- Organismo KEGG ---
