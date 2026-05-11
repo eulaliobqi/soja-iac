@@ -48,6 +48,11 @@ echo "Instalando ambientes Mamba..."
 install_env "$SCRIPT_DIR/envs/rnaseq-tools.yml"
 install_env "$SCRIPT_DIR/envs/r-analysis.yml"
 
+# ── Instala pacotes Bioconductor via BiocManager (WGCNA, org.Gmax.eg.db) ──
+echo ""
+echo "Instalando pacotes R via BiocManager (WGCNA, org.Gmax.eg.db)..."
+$CONDA_CMD run -n r-analysis Rscript "$SCRIPT_DIR/scripts/install_r_bioc_packages.R"
+
 # ── Cria estrutura de diretórios de resultado ─────────────────
 echo ""
 echo "Criando estrutura de diretórios..."
