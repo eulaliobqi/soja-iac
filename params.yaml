@@ -4,8 +4,8 @@
 
 # --- Inputs principais ---
 samplesheet:  "samplesheet.csv"
-genome_fasta: "/home/eulalio/soja/soja-iac/genome/gmax-genome.fa"
-genome_gff3:  "/home/eulalio/soja/soja-iac/genome/gmax-annot.gff3"
+genome_fasta: "/home/eulalio/soja/soja-iac/genome/genome.fa"
+genome_gff3:  "/home/eulalio/soja/soja-iac/genome/annot-genome.gff3"
 genome_gtf:   null   # null = converter automaticamente do GFF3
 genome_index: null   # null = construir índice automaticamente
 
