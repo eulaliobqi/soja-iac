@@ -73,11 +73,11 @@ process HISAT2_ALIGN {
         2>> ${meta.sample}_hisat2.log \\
     | samtools view -bS -@ ${task.cpus} - > ${meta.sample}.bam
 
-    # Valida taxa de alinhamento (mínimo 70%)
+    # Valida taxa de alinhamento
     RATE=\$(grep "Overall alignment rate" ${meta.sample}_hisat2.log | grep -oP '[\\d.]+(?=%)' | tail -1)
     echo "Alignment rate for ${meta.sample}: \${RATE}%"
-    awk -v rate="\${RATE}" -v sample="${meta.sample}" \
-        'BEGIN { if (rate+0 < 70) { print "ERROR: alignment rate below 70% for " sample; exit 1 } }'
+    awk -v rate="\${RATE}" -v sample="${meta.sample}" -v min="${params.min_align_rate}" \
+        'BEGIN { if (rate+0 < min+0) { print "ERROR: alignment rate " rate "% below minimum " min "% for " sample; exit 1 } }'
     """
 }
 
