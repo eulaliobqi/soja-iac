@@ -76,7 +76,8 @@ process HISAT2_ALIGN {
     # Valida taxa de alinhamento (mínimo 70%)
     RATE=\$(grep "Overall alignment rate" ${meta.sample}_hisat2.log | grep -oP '[\\d.]+(?=%)' | tail -1)
     echo "Alignment rate for ${meta.sample}: \${RATE}%"
-    awk "BEGIN { if (\${RATE} < 70) { print \"ERROR: alignment rate below 70% for ${meta.sample}\"; exit 1 } }"
+    awk -v rate="\${RATE}" -v sample="${meta.sample}" \
+        'BEGIN { if (rate+0 < 70) { print "ERROR: alignment rate below 70% for " sample; exit 1 } }'
     """
 }
 
