@@ -38,7 +38,7 @@ rmats_type:  "paired"    # paired (paired-end) ou single (single-end)
 # --- HISAT2 ---
 hisat2_threads:    16
 hisat2_max_intron: 500000
-min_align_rate:    60      # taxa mínima de alinhamento aceita (%)
+min_align_rate:    40      # taxa mínima de alinhamento aceita (%)
 
 # --- Organismo KEGG ---
 kegg_organism: "gma"     # Glycine max
