@@ -19,9 +19,9 @@ process RMATS {
     def b2 = treat_bams.collect { it.toString() }.join(',')
     def lib_type = params.rmats_type == "paired" ? "fr-firststrand" : "fr-unstranded"
     """
-    # Cria arquivos de lista de BAMs
-    echo "${b1}" | tr ',' '\\n' > b1_bams.txt
-    echo "${b2}" | tr ',' '\\n' > b2_bams.txt
+    # Cria arquivos de lista de BAMs (rMATS exige CSV em linha única)
+    echo "${b1}" > b1_bams.txt
+    echo "${b2}" > b2_bams.txt
 
     rmats.py \\
         --b1 b1_bams.txt \\
