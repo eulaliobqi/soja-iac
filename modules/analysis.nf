@@ -121,11 +121,11 @@ process QUARTO_REPORT {
     publishDir "${params.outdir}/report", mode: 'copy'
 
     input:
-    path(deseq2_dir)
-    path(enrichment_dir)
-    path(splicing_dir)
-    path(wgcna_dir)
-    path(integration_dir)
+    path(deseq2_dir,      stageAs: 'deseq2_figures')
+    path(enrichment_dir,  stageAs: 'enrichment_figures')
+    path(splicing_dir,    stageAs: 'splicing_dir')
+    path(wgcna_dir,       stageAs: 'wgcna_figures')
+    path(integration_dir, stageAs: 'integration_figures')
 
     output:
     path("rnaseq_report.html"), emit: report
@@ -135,11 +135,11 @@ process QUARTO_REPORT {
     cp -r ${projectDir}/report/rnaseq_report.qmd .
 
     quarto render rnaseq_report.qmd \\
-        -P deseq2_dir:${deseq2_dir} \\
-        -P enrichment_dir:${enrichment_dir} \\
-        -P splicing_dir:${splicing_dir} \\
-        -P wgcna_dir:${wgcna_dir} \\
-        -P integration_dir:${integration_dir} \\
+        -P deseq2_dir:deseq2_figures \\
+        -P enrichment_dir:enrichment_figures \\
+        -P splicing_dir:splicing_dir \\
+        -P wgcna_dir:wgcna_figures \\
+        -P integration_dir:integration_figures \\
         -P report_title:"${params.report_title}" \\
         -P report_author:"${params.report_author}" \\
         --output rnaseq_report.html
