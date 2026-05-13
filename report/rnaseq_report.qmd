@@ -35,9 +35,15 @@ suppressPackageStartupMessages({
   library(ggplot2)
   library(pheatmap)
   library(knitr)
-  library(kableExtra)
   library(scales)
 })
+
+# kableExtra opcional – fallback silencioso se não instalado
+if (requireNamespace("kableExtra", quietly = TRUE)) {
+  library(kableExtra)
+} else {
+  kable_styling <- function(x, ...) x
+}
 
 # Helper para carregar arquivos com fallback silencioso
 load_result <- function(path) {
