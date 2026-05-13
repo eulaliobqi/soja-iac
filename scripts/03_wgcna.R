@@ -170,6 +170,8 @@ pheatmap(ME_trait_cor,
          ),
          color = colorRampPalette(c("#2166AC", "white", "#D6604D"))(100),
          border_color = NA,
+         cluster_rows = nrow(ME_trait_cor) > 1,
+         cluster_cols = ncol(ME_trait_cor) > 1,
          main = "Correlação: Módulos × Fenótipo\n(* p < 0.05)",
          fontsize = 10)
 dev.off()
