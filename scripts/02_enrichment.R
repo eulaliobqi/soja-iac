@@ -57,17 +57,20 @@ de_sig <- res_all %>%
 
 cat(sprintf("Genes DE: %d | Todos testados: %d\n", nrow(de_sig), nrow(res_all)))
 
-# ── 2. Mapeamento de IDs para ENTREZ ─────────────────────────
-# org.Gmax.eg.db usa SYMBOL e ENTREZID
-# Os IDs do featureCounts (Glyma.XXX) são mapeados via SYMBOL ou TAIR
+# ── 2. Limpeza e mapeamento de IDs para ENTREZ ───────────────
+# Gene IDs do featureCounts têm sufixo de versão (ex: Glyma.08G200100.Wm82.a2.v1)
+# O OrgDb usa keytype "GID" com IDs no formato Glyma.XXGNNNNNN (sem sufixo)
+
+clean_glyma <- function(ids) {
+  sub("^(Glyma\\.[0-9A-Za-z]+G[0-9]+).*", "\\1", ids)
+}
 
 map_to_entrez <- function(gene_ids, db = gmax_db) {
-  # Tenta múltiplas keytypes na ordem de prioridade
-  for (ktype in c("SYMBOL", "TAIR", "ALIAS", "GENENAME")) {
-    available <- try(keytypes(db), silent = TRUE)
-    if (inherits(available, "try-error")) next
-    if (!ktype %in% available) next
+  available <- tryCatch(keytypes(db), error = function(e) character(0))
+  cat(sprintf("  Keytypes disponíveis: %s\n", paste(head(available, 10), collapse = ", ")))
 
+  for (ktype in c("GID", "SYMBOL", "TAIR", "ALIAS", "GENENAME")) {
+    if (!ktype %in% available) next
     mapped <- tryCatch(
       mapIds(db, keys = gene_ids, column = "ENTREZID",
              keytype = ktype, multiVals = "first"),
@@ -79,23 +82,29 @@ map_to_entrez <- function(gene_ids, db = gmax_db) {
       return(mapped)
     }
   }
-  # Fallback: usa o próprio ID numérico se já for ENTREZ
-  if (all(grepl("^[0-9]+$", gene_ids[!is.na(gene_ids)]))) {
+  if (all(grepl("^[0-9]+$", na.omit(gene_ids)))) {
     cat("  IDs já estão em formato ENTREZID numérico\n")
     return(setNames(gene_ids, gene_ids))
   }
-  warning("Mapeamento de IDs falhou. Verifique os gene IDs do featureCounts.")
-  return(setNames(rep(NA, length(gene_ids)), gene_ids))
+  warning("Mapeamento de IDs falhou para todos os keytypes tentados.")
+  return(setNames(rep(NA_character_, length(gene_ids)), gene_ids))
 }
 
-# Mapeamento
-cat("Mapeando gene IDs para ENTREZID...\n")
-all_genes_entrez  <- map_to_entrez(res_all$gene_id)
-de_genes_entrez   <- map_to_entrez(de_sig$gene_id)
+# Limpa sufixo de versão dos IDs
+res_all <- res_all %>% mutate(gene_id_clean = clean_glyma(gene_id))
+de_sig  <- de_sig  %>% mutate(gene_id_clean = clean_glyma(gene_id))
 
-# Remove NAs
-background  <- na.omit(as.character(all_genes_entrez))
-de_entrez   <- na.omit(as.character(de_genes_entrez))
+cat("Mapeando gene IDs para ENTREZID...\n")
+all_genes_entrez <- map_to_entrez(res_all$gene_id_clean)
+de_genes_entrez  <- map_to_entrez(de_sig$gene_id_clean)
+
+background <- na.omit(as.character(all_genes_entrez))
+de_entrez  <- na.omit(as.character(de_genes_entrez))
+
+# Mapa reverso ENTREZ → Glyma ID original (com sufixo) para uso na integração
+valid_idx       <- !is.na(all_genes_entrez)
+entrez_to_orig  <- setNames(res_all$gene_id[valid_idx],
+                             as.character(all_genes_entrez[valid_idx]))
 
 cat(sprintf("Background: %d | DE com ENTREZ: %d\n", length(background), length(de_entrez)))
 
@@ -110,7 +119,7 @@ run_go_ora <- function(genes, bg, ont, label) {
       pAdjustMethod = "BH",
       pvalueCutoff  = 0.05,
       qvalueCutoff  = 0.2,
-      readable      = TRUE,
+      readable      = FALSE,
       minGSSize     = 5,
       maxGSSize     = 500
     )
@@ -127,13 +136,28 @@ go_bp <- run_go_ora(de_entrez, background, "BP", "BP")
 go_mf <- run_go_ora(de_entrez, background, "MF", "MF")
 go_cc <- run_go_ora(de_entrez, background, "CC", "CC")
 
+# Converte IDs ENTREZ (separados por '/') de volta para Glyma IDs originais
+remap_col <- function(ids_str) {
+  sapply(ids_str, function(ids) {
+    entrez_vec <- strsplit(ids, "/")[[1]]
+    glyma_vec  <- entrez_to_orig[entrez_vec]
+    glyma_vec[is.na(glyma_vec)] <- entrez_vec[is.na(glyma_vec)]
+    paste(glyma_vec, collapse = "/")
+  }, USE.NAMES = FALSE)
+}
+
+restore_glyma_ids <- function(obj) {
+  if (is.null(obj)) return(NULL)
+  df <- as.data.frame(obj)
+  if ("geneID" %in% names(df))          df$geneID          <- remap_col(df$geneID)
+  if ("core_enrichment" %in% names(df)) df$core_enrichment <- remap_col(df$core_enrichment)
+  df
+}
+
 # Exporta
 export_enrich <- function(obj, fname) {
-  if (is.null(obj)) {
-    write_tsv(data.frame(), file.path(opt$outdir, fname))
-  } else {
-    write_tsv(as.data.frame(obj), file.path(opt$outdir, fname))
-  }
+  df <- if (is.null(obj)) data.frame() else restore_glyma_ids(obj)
+  write_tsv(df, file.path(opt$outdir, fname))
 }
 export_enrich(go_bp, "go_bp_results.tsv")
 export_enrich(go_mf, "go_mf_results.tsv")
@@ -166,7 +190,7 @@ cat("\nGSEA:\n")
 # Ranking por sinal (LFC * -log10(padj))
 ranked_df <- res_all %>%
   filter(!is.na(padj), !is.na(log2FoldChange)) %>%
-  mutate(entrez = as.character(all_genes_entrez[gene_id])) %>%
+  mutate(entrez = as.character(all_genes_entrez[gene_id_clean])) %>%
   filter(!is.na(entrez)) %>%
   mutate(rank_score = log2FoldChange * -log10(padj + 1e-300)) %>%
   arrange(desc(rank_score))
