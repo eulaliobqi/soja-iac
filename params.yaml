@@ -41,7 +41,7 @@ hisat2_max_intron: 500000
 min_align_rate:    40      # taxa mínima de alinhamento aceita (%)
 
 # --- Organismo KEGG ---
-kegg_organism: "gma"     # Glycine max
+kegg_organism: "gmx"     # Glycine max (soja) – código KEGG correto; "gma" é Granulicella mallensis
 
 # --- Relatório ---
 report_title:  "RNASeq Insight – Glycine max (IAC100 vs BR16)"
