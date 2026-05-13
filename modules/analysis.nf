@@ -48,6 +48,7 @@ process ENRICHMENT {
     path("figures/"),            emit: figures
 
     script:
+    def go_annot_arg = params.go_annot ? "--go_annot ${params.go_annot}" : ""
     """
     mkdir -p figures
     Rscript ${projectDir}/scripts/02_enrichment.R \\
@@ -57,7 +58,8 @@ process ENRICHMENT {
         --lfc         ${params.lfc_cutoff} \\
         --organism    ${params.kegg_organism} \\
         --outdir      . \\
-        --figures_dir figures
+        --figures_dir figures \\
+        ${go_annot_arg}
     """
 }
 
