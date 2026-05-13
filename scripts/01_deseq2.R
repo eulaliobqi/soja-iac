@@ -71,13 +71,21 @@ dds <- DESeq(dds, test = "Wald", fitType = "parametric")
 contrast  <- c("condition", opt$treatment, opt$control)
 res_raw   <- results(dds, contrast = contrast, alpha = opt$padj)
 
-# Tenta apeglm shrinkage (mais robusto)
+# Tenta apeglm → ashr → normal (fallback progressivo)
 tryCatch({
   coef_name <- resultsNames(dds)[grep(opt$treatment, resultsNames(dds))]
   res <- lfcShrink(dds, coef = coef_name, type = "apeglm", quiet = TRUE)
+  message("LFC shrinkage: apeglm")
 }, error = function(e) {
-  message("apeglm indisponível, usando ashr shrinkage...")
-  res <<- lfcShrink(dds, contrast = contrast, type = "ashr", quiet = TRUE)
+  tryCatch({
+    message("apeglm indisponível, usando ashr shrinkage...")
+    res <<- lfcShrink(dds, contrast = contrast, type = "ashr", quiet = TRUE)
+    message("LFC shrinkage: ashr")
+  }, error = function(e2) {
+    message("ashr indisponível, usando normal shrinkage...")
+    res <<- lfcShrink(dds, contrast = contrast, type = "normal", quiet = TRUE)
+    message("LFC shrinkage: normal")
+  })
 })
 
 # Contagens normalizadas (vst)
