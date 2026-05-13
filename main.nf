@@ -179,13 +179,7 @@ workflow {
 
     // ── Resumo final ──────────────────────────────────────────
     workflow.onComplete {
-        log.info """
-        ═══════════════════════════════════════
-         Pipeline concluído com sucesso!
-         Duração  : ${workflow.duration}
-         Status   : ${workflow.success ? 'OK' : 'FALHOU'}
-         Resultados: ${params.outdir}/
-        ═══════════════════════════════════════
-        """.stripIndent()
+        def status = workflow.success ? 'OK' : 'FALHOU'
+        log.info "Pipeline ${status} | Duracao: ${workflow.duration} | Resultados: ${params.outdir}/"
     }
 }
