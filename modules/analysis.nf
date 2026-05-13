@@ -123,25 +123,49 @@ process QUARTO_REPORT {
     publishDir "${params.outdir}/report", mode: 'copy'
 
     input:
-    path(deseq2_dir,      stageAs: 'deseq2_figures')
-    path(enrichment_dir,  stageAs: 'enrichment_figures')
-    path(splicing_dir,    stageAs: 'splicing_dir')
-    path(wgcna_dir,       stageAs: 'wgcna_figures')
-    path(integration_dir, stageAs: 'integration_figures')
+    path deseq2_all
+    path deseq2_sig
+    path norm_counts
+    path go_bp
+    path go_mf
+    path go_cc
+    path kegg
+    path gsea_go
+    path gsea_kegg
+    path splicing_sig
+    path wgcna_modules
+    path wgcna_hub_genes
+    path integration_candidates
 
     output:
     path("rnaseq_report.html"), emit: report
 
     script:
     """
+    mkdir -p deseq2_data enrichment_data splicing_data wgcna_data integration_data
+
+    cp ${deseq2_all}             deseq2_data/deseq2_results_all.tsv
+    cp ${deseq2_sig}             deseq2_data/deseq2_results_sig.tsv
+    cp ${norm_counts}            deseq2_data/normalized_counts.tsv
+    cp ${go_bp}                  enrichment_data/go_bp_results.tsv
+    cp ${go_mf}                  enrichment_data/go_mf_results.tsv
+    cp ${go_cc}                  enrichment_data/go_cc_results.tsv
+    cp ${kegg}                   enrichment_data/kegg_results.tsv
+    cp ${gsea_go}                enrichment_data/gsea_go_results.tsv
+    cp ${gsea_kegg}              enrichment_data/gsea_kegg_results.tsv
+    cp ${splicing_sig}           splicing_data/splicing_significant.tsv
+    cp ${wgcna_modules}          wgcna_data/wgcna_modules.tsv
+    cp ${wgcna_hub_genes}        wgcna_data/wgcna_hub_genes.tsv
+    cp ${integration_candidates} integration_data/key_candidates.tsv
+
     cp -r ${projectDir}/report/rnaseq_report.qmd .
 
     quarto render rnaseq_report.qmd \\
-        -P deseq2_dir:deseq2_figures \\
-        -P enrichment_dir:enrichment_figures \\
-        -P splicing_dir:splicing_dir \\
-        -P wgcna_dir:wgcna_figures \\
-        -P integration_dir:integration_figures \\
+        -P deseq2_dir:deseq2_data \\
+        -P enrichment_dir:enrichment_data \\
+        -P splicing_dir:splicing_data \\
+        -P wgcna_dir:wgcna_data \\
+        -P integration_dir:integration_data \\
         -P report_title:"${params.report_title}" \\
         -P report_author:"${params.report_author}" \\
         --output rnaseq_report.html

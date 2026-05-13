@@ -170,16 +170,18 @@ workflow {
 
     // ── 13. Relatório automático ──────────────────────────────
     QUARTO_REPORT(
-        DESEQ2.out.figures,
-        ENRICHMENT.out.figures,
-        PARSE_RMATS.out.significant.map { it.parent },
-        WGCNA.out.figures,
-        INTEGRATION.out.figures
+        DESEQ2.out.results_all,
+        DESEQ2.out.results_sig,
+        DESEQ2.out.norm_counts,
+        ENRICHMENT.out.go_bp,
+        ENRICHMENT.out.go_mf,
+        ENRICHMENT.out.go_cc,
+        ENRICHMENT.out.kegg,
+        ENRICHMENT.out.gsea_go,
+        ENRICHMENT.out.gsea_kegg,
+        PARSE_RMATS.out.significant,
+        WGCNA.out.modules,
+        WGCNA.out.hub_genes,
+        INTEGRATION.out.candidates
     )
-
-    // ── Resumo final ──────────────────────────────────────────
-    workflow.onComplete {
-        def status = workflow.success ? 'OK' : 'FALHOU'
-        log.info "Pipeline ${status} | Duracao: ${workflow.duration} | Resultados: ${params.outdir}/"
-    }
 }
