@@ -35,6 +35,11 @@ cat("═════════════════════════
 cat("  Integração Multi-ômica\n")
 cat("═══════════════════════════════════════\n")
 
+# Remove sufixo de versão Phytozome para comparações entre datasets
+clean_glyma <- function(ids) {
+  sub("^(Glyma\\.[0-9A-Za-z]+G[0-9]+).*", "\\1", as.character(ids))
+}
+
 theme_pub <- theme_bw(base_size = 12) +
   theme(panel.grid.minor = element_blank(),
         plot.title = element_text(face = "bold"))
@@ -77,8 +82,8 @@ get_genes_from_enrichment <- function(enrich_df) {
   return(genes)
 }
 
-go_genes   <- get_genes_from_enrichment(go_res)
-kegg_genes <- get_genes_from_enrichment(kegg_res)
+go_genes   <- clean_glyma(get_genes_from_enrichment(go_res))
+kegg_genes <- clean_glyma(get_genes_from_enrichment(kegg_res))
 enriched_genes <- union(go_genes, kegg_genes)
 
 # Genes com splicing alternativo
@@ -99,10 +104,11 @@ if (nrow(de_sig) > 0) {
       mean_score   = log10(baseMean + 1) / max(log10(baseMean + 1), na.rm = TRUE),
       sig_score    = -log10(padj + 1e-300) / max(-log10(padj + 1e-300), na.rm = TRUE),
 
-      # Flags de camadas de evidência
-      has_splicing  = gene_id %in% splice_genes,
-      in_pathway    = gene_id %in% enriched_genes,
-      is_hub        = gene_id %in% hub_gene_ids,
+      # Flags de camadas de evidência (usa IDs limpos para comparação cross-dataset)
+      gene_id_clean = clean_glyma(gene_id),
+      has_splicing  = gene_id_clean %in% clean_glyma(splice_genes),
+      in_pathway    = gene_id_clean %in% enriched_genes,
+      is_hub        = gene_id_clean %in% clean_glyma(hub_gene_ids),
 
       # Score composto (0-10)
       integration_score = round(
