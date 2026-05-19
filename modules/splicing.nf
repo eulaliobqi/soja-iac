@@ -2,13 +2,30 @@
 // Módulo: Splicing Alternativo – rMATS
 // ============================================================
 
+process DETECT_READ_LENGTH {
+    label 'low_mem'
+
+    input:
+    tuple val(meta), path(reads)
+
+    output:
+    path("read_length.txt"), emit: length
+
+    script:
+    """
+    zcat ${reads[0]} | awk 'NR==2{print length(\$0); exit}' > read_length.txt
+    echo "Read length detectado: \$(cat read_length.txt) nt (amostra: ${meta.sample})"
+    """
+}
+
 process RMATS {
     publishDir "${params.outdir}/splicing", mode: 'copy'
 
     input:
-    path(ctrl_bams)     // lista de BAMs do grupo controle
-    path(treat_bams)    // lista de BAMs do grupo tratamento
+    path(ctrl_bams)
+    path(treat_bams)
     path(gtf)
+    path(read_length_file)
 
     output:
     path("rmats_output/"),      emit: results_dir
@@ -19,7 +36,9 @@ process RMATS {
     def b2 = treat_bams.collect { it.toString() }.join(',')
     def lib_type = params.rmats_type == "paired" ? "fr-firststrand" : "fr-unstranded"
     """
-    # Cria arquivos de lista de BAMs (rMATS exige CSV em linha única)
+    READ_LEN=\$(cat ${read_length_file})
+    echo "Usando read_length=\${READ_LEN} nt para rMATS"
+
     echo "${b1}" > b1_bams.txt
     echo "${b2}" > b2_bams.txt
 
@@ -31,7 +50,7 @@ process RMATS {
         --tmp rmats_tmp \\
         -t ${params.rmats_type} \\
         --libType ${lib_type} \\
-        --readLength ${params.read_length} \\
+        --readLength \${READ_LEN} \\
         --nthread ${task.cpus} \\
         --tstat ${task.cpus} \\
         --statoff

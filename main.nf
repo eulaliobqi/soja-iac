@@ -28,6 +28,7 @@ include { TXIMPORT                 } from './modules/salmon'
 
 include { COMBAT_SEQ               } from './modules/batch'
 
+include { DETECT_READ_LENGTH       } from './modules/splicing'
 include { RMATS                    } from './modules/splicing'
 include { PARSE_RMATS              } from './modules/splicing'
 
@@ -161,7 +162,11 @@ workflow {
         counts_for_de = PARSE_COUNTS.out.counts
     }
 
-    // ── 11. Splicing alternativo ──────────────────────────────
+    // ── 11. Detecção automática de read length + rMATS ───────
+    // Usa a primeira amostra trimada para detectar o comprimento real
+    first_trimmed = trimmed_ch.first()
+    DETECT_READ_LENGTH(first_trimmed)
+
     ctrl_bams = sorted_bams_ch
         .filter { meta, bam -> meta.condition == params.control_group }
         .map    { meta, bam -> bam }.collect()
@@ -169,7 +174,7 @@ workflow {
         .filter { meta, bam -> meta.condition == params.treatment_group }
         .map    { meta, bam -> bam }.collect()
 
-    RMATS(ctrl_bams, treat_bams, gtf)
+    RMATS(ctrl_bams, treat_bams, gtf, DETECT_READ_LENGTH.out.length)
     PARSE_RMATS(RMATS.out.results_dir)
 
     // ── 12. Expressão diferencial ─────────────────────────────
