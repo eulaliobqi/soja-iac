@@ -24,19 +24,20 @@ process SALMON_INDEX {
 
 process SALMON_QUANT {
     label 'medium_mem'
-    tag { sample }
+    tag { meta.sample }
     publishDir "${params.outdir}/counts/salmon", mode: 'copy'
 
     input:
-    tuple val(sample), path(reads)
+    tuple val(meta), path(reads)
     path(index)
 
     output:
-    tuple val(sample), path("${sample}/"), emit: quant
-    path("${sample}/quant.sf"),             emit: quant_sf
-    path("${sample}/logs/"),               emit: logs
+    tuple val(meta), path("${meta.sample}/"), emit: quant
+    path("${meta.sample}/quant.sf"),           emit: quant_sf
+    path("${meta.sample}/logs/"),              emit: logs
 
     script:
+    def sample = meta.sample
     def r1 = reads[0]
     def r2 = reads.size() > 1 ? "-2 ${reads[1]}" : ""
     def lib = params.strandedness == 1 ? "SF" :
