@@ -25,7 +25,7 @@ process SALMON_INDEX {
 process SALMON_QUANT {
     label 'medium_mem'
     tag { sample }
-    publishDir "${params.outdir}/counts/salmon/${sample}", mode: 'copy'
+    publishDir "${params.outdir}/counts/salmon", mode: 'copy'
 
     input:
     tuple val(sample), path(reads)
