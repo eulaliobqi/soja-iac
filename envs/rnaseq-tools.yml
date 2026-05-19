@@ -15,3 +15,6 @@ dependencies:
   - gffread=0.12.7
   - rseqc=5.0.3
   - rmats>=4.1.0
+  - salmon=1.10.3
+  - stringtie=2.2.1
+  - gffcompare=0.12.6
