@@ -40,26 +40,17 @@ if (length(missing) > 0) stop("quant.sf faltando: ", paste(names(missing), colla
 # ── 2. tx2gene ────────────────────────────────────────────────
 if (!is.null(opt$tx2gene) && file.exists(opt$tx2gene)) {
   tx2gene <- read_tsv(opt$tx2gene, col_names = c("tx", "gene"), show_col_types = FALSE)
-} else if (!is.null(opt$gtf) && file.exists(opt$gtf)) {
-  cat("Construindo tx2gene a partir do GTF...\n")
-  suppressPackageStartupMessages(library(GenomicFeatures))
-  make_txdb <- function(gtf) {
-    if (requireNamespace("txdbmaker", quietly = TRUE)) {
-      txdbmaker::makeTxDbFromGFF(gtf, format = "gtf")
-    } else {
-      GenomicFeatures::makeTxDbFromGFF(gtf, format = "gtf")
-    }
-  }
-  txdb <- make_txdb(opt$gtf)
-  k    <- keys(txdb, keytype = "TXNAME")
-  tx2gene <- AnnotationDbi::select(txdb, k, "GENEID", "TXNAME")
-  names(tx2gene) <- c("tx", "gene")
 } else {
-  # Inferir tx→gene removendo sufixo de transcrito: Glyma.01G000100.1 → Glyma.01G000100
-  cat("Inferindo tx2gene por strip do sufixo numérico...\n")
-  quant1 <- read_tsv(quant_files[1], show_col_types = FALSE)
-  txids  <- quant1$Name
-  geneids <- gsub("\\.[0-9]+$", "", txids)
+  # Inferir tx→gene diretamente dos IDs reais do quant.sf
+  # Evita mismatch entre GTF txdb e FASTA headers gerados pelo gffread
+  cat("Inferindo tx2gene dos IDs do quant.sf...\n")
+  quant1  <- read_tsv(quant_files[1], show_col_types = FALSE)
+  txids   <- quant1$Name
+  # Glycine max Wm82: Glyma.01G000600.1.Wm82.a4.v1 → Glyma.01G000600
+  geneids <- gsub("^(Glyma\\.[0-9]+G[0-9]+).*", "\\1", txids)
+  # Fallback genérico para IDs que não casaram com o padrão Glyma
+  unchanged <- geneids == txids
+  geneids[unchanged] <- gsub("\\.[0-9]+$", "", txids[unchanged])
   tx2gene <- data.frame(tx = txids, gene = geneids)
 }
 
@@ -68,7 +59,7 @@ cat(sprintf("Transcritos mapeados: %d → genes únicos: %d\n",
 
 # ── 3. tximport ───────────────────────────────────────────────
 txi <- tximport(quant_files, type = "salmon", tx2gene = tx2gene,
-                ignoreTxVersion = TRUE, ignoreAfterBar = TRUE)
+                ignoreTxVersion = FALSE, ignoreAfterBar = FALSE)
 
 counts_df <- as.data.frame(txi$counts) |>
   tibble::rownames_to_column("gene_id")
