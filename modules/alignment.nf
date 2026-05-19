@@ -1,5 +1,6 @@
 // ============================================================
-// Módulo: Alinhamento – gffread + STAR (2.7.10b) + samtools
+// Módulo: Alinhamento – gffread + HISAT2 + samtools
+// (STAR mantido no arquivo mas não usado: CPU sem suporte AVX2)
 // ============================================================
 
 process GFFREAD {
