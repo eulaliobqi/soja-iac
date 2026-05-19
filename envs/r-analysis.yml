@@ -5,16 +5,48 @@ channels:
   - defaults
 dependencies:
   - r-base>=4.3
+  # Expressão diferencial
   - bioconductor-deseq2>=1.40
+  # Enriquecimento funcional
   - bioconductor-clusterprofiler>=4.8
   - bioconductor-enrichplot>=1.20
   - bioconductor-enhancedvolcano>=1.18
   - bioconductor-fgsea>=1.24
+  # Anotação / IDs
   - bioconductor-biomart>=2.54
   - bioconductor-annotationhub>=3.8
+  - bioconductor-genomicfeatures>=1.54
+  - bioconductor-txdbmaker>=1.0
+  # Importação Salmon → gene counts
+  - bioconductor-tximport>=1.28
+  # GOseq
+  - bioconductor-goseq>=1.52
+  - bioconductor-genomeinfodb
+  # WGCNA
   - bioconductor-impute
   - bioconductor-preprocesscore
+  - r-wgcna>=1.72
+  - r-dynamictreecut>=1.63
+  - r-flashclust>=1.01
+  # Splicing / Biostrings
+  - bioconductor-biostrings>=2.68
+  # PPI – STRINGdb
+  - bioconductor-stringdb>=2.4
+  # Machine Learning
+  - r-caret>=6.0
+  - r-e1071>=1.7
+  - r-glmnet>=4.1
+  - r-ranger>=0.16
+  # GENIE3
+  - bioconductor-genie3>=1.22
+  # Meta-análise GEO
+  - bioconductor-geoquery>=2.68
+  - bioconductor-limma>=3.56
+  # Batch correction
+  - bioconductor-sva>=3.48
+  # Biocmanager fallback
   - r-biocmanager
+  # Visualização / relatório
   - r-ggplot2>=3.4
   - r-pheatmap>=1.0.12
   - r-ggrepel>=0.9
@@ -23,15 +55,13 @@ dependencies:
   - r-readr>=2.1
   - r-stringr>=1.5
   - r-optparse>=1.7
+  - r-scales>=1.2
+  - r-patchwork>=1.1
+  - r-rmarkdown>=2.20
+  - r-knitr>=1.42
+  - r-htmltools>=0.5
   - r-shiny>=1.7
   - r-shinydashboard>=0.7
   - r-plotly>=4.10
   - r-dt>=0.28
-  - r-rmarkdown>=2.20
-  - r-knitr>=1.42
-  - r-htmltools>=0.5
-  - r-scales>=1.2
-  - r-patchwork>=1.1
-  - r-dynamictreecut>=1.63
-  - r-flashclust>=1.01
   - quarto
