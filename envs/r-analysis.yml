@@ -22,7 +22,7 @@ dependencies:
   # GOseq
   - bioconductor-goseq>=1.52
   - bioconductor-genomeinfodb
-  # WGCNA
+  # WGCNA (r-wgcna no conda-forge; bioconductor-wgcna não existe)
   - bioconductor-impute
   - bioconductor-preprocesscore
   - r-wgcna>=1.72
