@@ -119,6 +119,163 @@ process INTEGRATION {
     """
 }
 
+process GOSEQ {
+    publishDir "${params.outdir}/enrichment", mode: 'copy'
+
+    input:
+    path(deseq2_all)
+    path(gtf)
+
+    output:
+    path("goseq_bp_results.tsv"), emit: go_bp
+    path("goseq_mf_results.tsv"), emit: go_mf
+    path("goseq_cc_results.tsv"), emit: go_cc
+
+    script:
+    def go_annot_arg = params.go_annot ? "--go_annot ${params.go_annot}" : ""
+    """
+    Rscript ${projectDir}/scripts/02b_goseq.R \
+        --deseq2 ${deseq2_all} \
+        --gtf    ${gtf} \
+        --padj   ${params.padj_cutoff} \
+        --lfc    ${params.lfc_cutoff} \
+        --outdir . \
+        ${go_annot_arg}
+    """
+}
+
+process MACHINE_LEARNING {
+    label 'medium_mem'
+    publishDir "${params.outdir}/ml", mode: 'copy'
+
+    input:
+    path(norm_counts)
+    path(deseq2_sig)
+    path(metadata)
+
+    output:
+    path("ml_results.tsv"),        emit: results
+    path("feature_importance.tsv"),emit: features
+    path("figures/"),              emit: figures
+
+    script:
+    """
+    mkdir -p figures
+    Rscript ${projectDir}/scripts/06_machine_learning.R \
+        --norm_counts ${norm_counts} \
+        --deseq2_sig  ${deseq2_sig} \
+        --metadata    ${metadata} \
+        --outdir      . \
+        --figures_dir figures
+    """
+}
+
+process PPI_NETWORK {
+    label 'medium_mem'
+    publishDir "${params.outdir}/network", mode: 'copy'
+
+    input:
+    path(deseq2_sig)
+
+    output:
+    path("ppi_edges.tsv"),      emit: edges
+    path("ppi_nodes.tsv"),      emit: nodes
+    path("hub_genes.tsv"),      emit: hub_genes
+    path("network_summary.txt"),emit: summary
+    path("figures/"),           emit: figures
+
+    script:
+    """
+    mkdir -p figures
+    Rscript ${projectDir}/scripts/07_ppi_network.R \
+        --deseq2_sig  ${deseq2_sig} \
+        --outdir      . \
+        --figures_dir figures
+    """
+}
+
+process PLANTFDB {
+    label 'low_mem'
+    publishDir "${params.outdir}/plantfdb", mode: 'copy'
+
+    input:
+    path(deseq2_sig)
+    path(deseq2_all)
+
+    output:
+    path("tf_deg_classified.tsv"),   emit: tf_classified
+    path("tf_family_summary.tsv"),   emit: family_summary
+    path("tf_family_enrichment.tsv"),emit: family_enrichment
+    path("plantfdb_summary.txt"),    emit: summary
+    path("figures/"),                emit: figures
+
+    script:
+    def pf_arg = params.plantfdb_file ? "--plantfdb_file ${params.plantfdb_file}" : ""
+    """
+    mkdir -p figures
+    Rscript ${projectDir}/scripts/08_plantfdb.R \
+        --deseq2_sig ${deseq2_sig} \
+        --deseq2_all ${deseq2_all} \
+        --outdir      . \
+        --figures_dir figures \
+        ${pf_arg}
+    """
+}
+
+process GENIE3 {
+    label 'high_mem'
+    publishDir "${params.outdir}/genie3", mode: 'copy'
+
+    input:
+    path(norm_counts)
+    path(tf_classified)
+
+    output:
+    path("genie3_network.tsv"),  emit: network
+    path("genie3_hub_tfs.tsv"),  emit: hub_tfs
+    path("genie3_summary.txt"),  emit: summary
+    path("figures/"),            emit: figures
+
+    script:
+    """
+    mkdir -p figures
+    Rscript ${projectDir}/scripts/09_genie3.R \
+        --norm_counts   ${norm_counts} \
+        --tf_classified ${tf_classified} \
+        --n_trees       ${params.genie3_trees ?: 500} \
+        --n_links       ${params.genie3_links ?: 5000} \
+        --ncores        ${task.cpus} \
+        --outdir        . \
+        --figures_dir   figures
+    """
+}
+
+process METANALYSIS {
+    label 'medium_mem'
+    publishDir "${params.outdir}/metanalysis", mode: 'copy'
+
+    input:
+    path(deseq2_sig)
+
+    output:
+    path("metanalysis_validated_genes.tsv"), emit: validated
+    path("metanalysis_overlap.tsv"),         emit: overlap
+    path("metanalysis_summary.tsv"),         emit: summary
+    path("metanalysis_report.txt"),          emit: report
+    path("figures/"),                        emit: figures
+
+    script:
+    def geo_arg = params.geo_accessions ? "--geo_accessions '${params.geo_accessions}'" : ""
+    """
+    mkdir -p figures
+    Rscript ${projectDir}/scripts/10_metanalysis.R \
+        --deseq2_sig ${deseq2_sig} \
+        --outdir      . \
+        --figures_dir figures \
+        ${geo_arg}
+    """
+}
+
 process QUARTO_REPORT {
     publishDir "${params.outdir}/report", mode: 'copy'
 

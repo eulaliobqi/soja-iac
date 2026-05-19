@@ -1,48 +1,74 @@
 # ============================================================
-# Parâmetros da análise – Glycine max | IAC100 vs BR16
+# params.yaml – Glycine max Wm82.a4.v1 | IAC100 vs BR16
 # ============================================================
 
-# --- Inputs principais ---
-samplesheet:  "samplesheet.csv"
+# ── Genoma de referência ──────────────────────────────────────
 genome_fasta: "/home/eulalio/soja/soja-iac/genome/genome.fa"
 genome_gff3:  "/home/eulalio/soja/soja-iac/genome/annot-genome.gff3"
-genome_gtf:   null   # null = converter automaticamente do GFF3
+genome_gtf:   null                                      # null → converte GFF3 automaticamente
 genome_index: "/home/eulalio/soja/soja-iac/genome/genome_index"  # índice HISAT2 pré-construído
 
-# --- Diretório de resultados ---
+# ── Amostras ──────────────────────────────────────────────────
+samplesheet: "samplesheet.csv"
+
+# ── Diretório de resultados ───────────────────────────────────
 outdir: "results"
 
-# --- Contraste DESeq2 ---
+# ── Contraste DESeq2 ──────────────────────────────────────────
+# IMPORTANTE: sem hífens nos nomes (quebra fórmula R ~condition)
 contrast:        "IAC100_vs_BR16"
 control_group:   "control"
 treatment_group: "treatment"
 
-# --- Critérios de filtragem ---
+# ── Critérios de filtragem ────────────────────────────────────
 padj_cutoff: 0.05
 lfc_cutoff:  1.0
 
-# --- featureCounts ---
-# 0 = unstranded | 1 = forward-stranded | 2 = reverse-stranded | -1 = auto-detect
+# ── featureCounts ─────────────────────────────────────────────
+# 0=unstranded | 1=stranded | 2=rev-stranded | -1=auto-detect
 strandedness: -1
 feature_type: "exon"
 gene_attr:    "gene_id"
 
-# --- fastp (trimagem) ---
+# ── Salmon ───────────────────────────────────────────────────
+run_salmon: true
+
+# ── Correção de batch (ComBat-Seq) ────────────────────────────
+run_combat_seq: true
+
+# ── fastp ─────────────────────────────────────────────────────
 min_length: 36
 quality:    20
 
-# --- rMATS ---
-read_length: 150         # comprimento das reads após trimagem
-rmats_type:  "paired"    # paired (paired-end) ou single (single-end)
+# ── rMATS ─────────────────────────────────────────────────────
+read_length: 150
+rmats_type:  "paired"
 
-# --- HISAT2 ---
+# ── HISAT2 ────────────────────────────────────────────────────
 hisat2_threads:    16
 hisat2_max_intron: 500000
-min_align_rate:    40      # taxa mínima de alinhamento aceita (%)
+min_align_rate:    40
 
-# --- Organismo KEGG ---
-kegg_organism: "gmx"     # Glycine max (soja) – código KEGG correto; "gma" é Granulicella mallensis
+# ── StringTie + lncRNA (Fase 2) ──────────────────────────────
+run_stringtie: false    # true para predição de lncRNAs
 
-# --- Relatório ---
-report_title:  "RNASeq Insight – Glycine max (IAC100 vs BR16)"
-report_author: "Eulalio Santos"
+# ── Fase 3 – Alto impacto ─────────────────────────────────────
+run_ml:         true
+run_ppi:        true
+plantfdb_file:  ""      # vazio → download automático Gma_TF_list.txt.gz
+geo_accessions: "GSE99698,GSE107900"
+genie3_trees:   500
+genie3_links:   5000
+
+# ── Anotação funcional ────────────────────────────────────────
+# "gmx" é o código KEGG correto para Glycine max
+# "gma" é Granulicella mallensis — NÃO usar
+kegg_organism: "gmx"
+
+# ── Arquivo GO Phytozome (opcional) ──────────────────────────
+# Gmax_508_Wm82.a4.v1.annotation_info.txt do SoyBase
+go_annot: ""
+
+# ── Relatório ─────────────────────────────────────────────────
+report_title:  "RNASeq Insight – Glycine max Wm82.a4.v1 (IAC100 vs BR16)"
+report_author: "Eulalio Santos – UFV"
