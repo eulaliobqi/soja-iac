@@ -7,18 +7,20 @@ process SALMON_INDEX {
     publishDir "${params.outdir}/salmon_index", mode: 'copy'
 
     input:
-    path(transcriptome_fa)
+    path(genome_fasta)
+    path(gtf)
 
     output:
     path("salmon_index/"), emit: index
 
     script:
+    // Extrai transcritos do genoma usando o GTF antes de indexar
     """
+    gffread ${gtf} -g ${genome_fasta} -w transcriptome.fa
     salmon index \
         --threads ${task.cpus} \
-        --transcripts ${transcriptome_fa} \
-        --index salmon_index \
-        --gencode
+        --transcripts transcriptome.fa \
+        --index salmon_index
     """
 }
 

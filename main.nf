@@ -143,7 +143,7 @@ workflow {
 
     // ── 8. Salmon (pseudoalinhamento paralelo) ────────────────
     if (params.run_salmon != false) {
-        SALMON_INDEX(genome_fasta)
+        SALMON_INDEX(genome_fasta, gtf)
         SALMON_QUANT(trimmed_ch, SALMON_INDEX.out.index)
         quant_dirs = SALMON_QUANT.out.quant.map { s, d -> d }.collect()
         TXIMPORT(quant_dirs, file(params.samplesheet), gtf)

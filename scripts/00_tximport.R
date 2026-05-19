@@ -68,7 +68,7 @@ cat(sprintf("Transcritos mapeados: %d → genes únicos: %d\n",
 
 # ── 3. tximport ───────────────────────────────────────────────
 txi <- tximport(quant_files, type = "salmon", tx2gene = tx2gene,
-                ignoreTxVersion = FALSE, ignoreAfterBar = TRUE)
+                ignoreTxVersion = TRUE, ignoreAfterBar = TRUE)
 
 counts_df <- as.data.frame(txi$counts) |>
   tibble::rownames_to_column("gene_id")
