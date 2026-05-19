@@ -15,8 +15,8 @@ include { MULTIQC as MULTIQC_TRIM  } from './modules/qc'
 include { FASTP                    } from './modules/trimming'
 
 include { GFFREAD                  } from './modules/alignment'
-include { HISAT2_BUILD             } from './modules/alignment'
-include { HISAT2_ALIGN             } from './modules/alignment'
+include { STAR_INDEX               } from './modules/alignment'
+include { STAR_ALIGN               } from './modules/alignment'
 include { SAMTOOLS_SORT_INDEX      } from './modules/alignment'
 
 include { FEATURECOUNTS            } from './modules/quantification'
@@ -111,12 +111,12 @@ workflow {
         gtf = GFFREAD.out.gtf
     }
 
-    // ── 3. Índice alinhador ───────────────────────────────────
+    // ── 3. Índice STAR ───────────────────────────────────────
     if (params.genome_index) {
         index_dir = file(params.genome_index)
     } else {
-        HISAT2_BUILD(genome_fasta, gtf)
-        index_dir = HISAT2_BUILD.out.index_dir
+        STAR_INDEX(genome_fasta, gtf)
+        index_dir = STAR_INDEX.out.index
     }
 
     // ── 4. QC pré-trimagem ────────────────────────────────────
@@ -136,8 +136,8 @@ workflow {
     )
 
     // ── 7. Alinhamento ────────────────────────────────────────
-    HISAT2_ALIGN(trimmed_ch, index_dir)
-    SAMTOOLS_SORT_INDEX(HISAT2_ALIGN.out.bam)
+    STAR_ALIGN(trimmed_ch, index_dir)
+    SAMTOOLS_SORT_INDEX(STAR_ALIGN.out.bam)
     sorted_bams_ch = SAMTOOLS_SORT_INDEX.out.bam
 
     // ── 8. Salmon (pseudoalinhamento paralelo) ────────────────

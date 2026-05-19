@@ -1,5 +1,5 @@
 // ============================================================
-// Módulo: Alinhamento – gffread + HISAT2 + samtools
+// Módulo: Alinhamento – gffread + STAR (2.7.10b) + samtools
 // ============================================================
 
 process GFFREAD {
@@ -13,8 +13,81 @@ process GFFREAD {
     path("annotation.gtf"), emit: gtf
 
     script:
+    // Lição 3: corrige chrChr gerado pelo gffread em Glycine max (Chr01→chrChr01)
     """
-    gffread ${gff3} -T -o annotation.gtf
+    gffread ${gff3} -T -o - | sed 's/^chrChr/Chr/; s/^chrchr/Chr/' > annotation.gtf
+    """
+}
+
+process STAR_INDEX {
+    label 'high_mem'
+    publishDir "${params.outdir}/genome/star_index", mode: 'copy'
+
+    input:
+    path(genome_fasta)
+    path(gtf)
+
+    output:
+    path("star_index/"), emit: index
+
+    script:
+    // STAR 2.7.10b obrigatório — 2.7.11b causa SIGSEGV em CPUs sem AVX2 (Lição 1)
+    """
+    mkdir -p star_index
+    STAR \
+        --runMode genomeGenerate \
+        --runThreadN ${task.cpus} \
+        --genomeDir star_index \
+        --genomeFastaFiles ${genome_fasta} \
+        --sjdbGTFfile ${gtf} \
+        --genomeSAindexNbases 13
+    """
+}
+
+process STAR_ALIGN {
+    label 'high_mem'
+    tag "${meta.sample}"
+    publishDir "${params.outdir}/aligned", mode: 'copy',
+        saveAs: { fn -> fn.endsWith('.log') || fn.endsWith('.tab') ? "logs/${fn}" : fn }
+
+    input:
+    tuple val(meta), path(reads)
+    path(index_dir)
+
+    output:
+    tuple val(meta), path("${meta.sample}.bam"), emit: bam
+    path("${meta.sample}_Log.final.out"),         emit: log
+
+    script:
+    def (r1, r2) = reads
+    def strand = params.strandedness == 1 ? "Forward" :
+                 params.strandedness == 2 ? "Reverse" : "Unstranded"
+    """
+    STAR \
+        --runThreadN ${task.cpus} \
+        --genomeDir ${index_dir} \
+        --readFilesIn ${r1} ${r2} \
+        --readFilesCommand zcat \
+        --outSAMtype BAM Unsorted \
+        --outSAMattributes NH HI AS NM MD \
+        --outFilterMultimapNmax 10 \
+        --alignSJoverhangMin 8 \
+        --alignSJDBoverhangMin 1 \
+        --outFilterMismatchNmax 999 \
+        --outFilterMismatchNoverReadLmax 0.04 \
+        --alignIntronMin 20 \
+        --alignIntronMax 1000000 \
+        --alignMatesGapMax 1000000 \
+        --outFileNamePrefix ${meta.sample}_ \
+        --outStd BAM_Unsorted \
+        --soloStrand ${strand} \
+    > ${meta.sample}.bam
+
+    # Valida taxa de alinhamento
+    RATE=\$(grep "Uniquely mapped reads %" ${meta.sample}_Log.final.out | awk '{print \$NF}' | tr -d '%')
+    echo "STAR alignment rate for ${meta.sample}: \${RATE}%"
+    awk -v rate="\${RATE}" -v sample="${meta.sample}" -v min="${params.min_align_rate}" \
+        'BEGIN { if (rate+0 < min+0) { print "WARN: alignment rate " rate "% below " min "% for " sample } }'
     """
 }
 
