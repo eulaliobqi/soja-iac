@@ -45,9 +45,9 @@ if (!is.null(opt$tx2gene) && file.exists(opt$tx2gene)) {
   suppressPackageStartupMessages(library(GenomicFeatures))
   make_txdb <- function(gtf) {
     if (requireNamespace("txdbmaker", quietly = TRUE)) {
-      txdbmaker::makeTxDbFromGFF(gtf, format = "GTF")
+      txdbmaker::makeTxDbFromGFF(gtf, format = "gtf")
     } else {
-      GenomicFeatures::makeTxDbFromGFF(gtf, format = "GTF")
+      GenomicFeatures::makeTxDbFromGFF(gtf, format = "gtf")
     }
   }
   txdb <- make_txdb(opt$gtf)

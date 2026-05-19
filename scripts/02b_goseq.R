@@ -46,9 +46,9 @@ cat(sprintf("DEGs: %d / %d\n", sum(is_deg), length(is_deg)))
 # ── 2. Comprimentos de gene ───────────────────────────────────
 make_txdb <- function(gtf) {
   if (requireNamespace("txdbmaker", quietly = TRUE)) {
-    txdbmaker::makeTxDbFromGFF(gtf, format = "GTF")
+    txdbmaker::makeTxDbFromGFF(gtf, format = "gtf")
   } else {
-    GenomicFeatures::makeTxDbFromGFF(gtf, format = "GTF")
+    GenomicFeatures::makeTxDbFromGFF(gtf, format = "gtf")
   }
 }
 
