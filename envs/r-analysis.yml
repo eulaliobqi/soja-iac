@@ -37,6 +37,12 @@ dependencies:
   - r-e1071>=1.7
   - r-glmnet>=4.1
   - r-ranger>=0.16
+  - r-randomforest>=4.7
+  - r-proc>=1.18
+  # Redes / grafos
+  - r-igraph>=2.0
+  # Utilitários
+  - r-tibble>=3.2
   # GENIE3
   - bioconductor-genie3>=1.22
   # Meta-análise GEO
